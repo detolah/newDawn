@@ -1,0 +1,41 @@
+{%- comment -%}
+	This file has been added by the Yoast SEO for Shopify app.
+	You can learn more about this (and learn how to cleanly revert these changes) at https://yoa.st/removing-theme-changes.
+{%- endcomment -%}
+
+{%- assign offers_schema = "" | split: ',' -%}
+{%- for variant in product.variants %}
+	{%- liquid
+		capture variant_availability
+			render "yoast-seo-product-variant-availability", variant: variant
+		endcapture
+
+		assign variant_name = product.title | append: " - " | append: variant.title
+	-%}
+	{%- capture offer_schema -%}
+	{
+		"@type": "Offer",
+		"name": {{ variant_name | json }},
+{%- if variant.sku != empty and variant.sku != null %}
+		"sku": {{ variant.sku | json }},
+{%- endif -%}
+		{%- comment -%}Schema requires a "." seperated value, Shopify uses the locale based convertion in their helper methods.{%- endcomment %}
+		"price": {{ variant.price | divided_by: 100.0 }},
+		"priceCurrency": {{- cart.currency.iso_code | json -}},
+		"availability": "https://schema.org/{{ variant_availability | strip }}",
+		"priceSpecification": {
+			"@type": "PriceSpecification",
+			"valueAddedTaxIncluded": {{ variant.taxable }}
+		},
+		"url": {{ shop.url | append: variant.url | json }}
+	}
+	{%- endcapture -%}
+
+	{%- assign offer_schema = offer_schema | split: '\_([.YOAST_ARRAY_SPLITTER.])_/' -%}
+	{%- assign offers_schema = offers_schema | concat: offer_schema -%}
+{%- endfor -%}
+{%- if offers_schema.size > 0 %}
+	"offers": [
+		{{ offers_schema | join: ', ' }}
+	],
+{%- endif -%}
